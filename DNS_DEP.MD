@@ -2,7 +2,7 @@
 
 ### 0x00 安装bind
 
-'yum -y install bind-libs bind-utils bind bind-chroot'
+`yum -y install bind-libs bind-utils bind bind-chroot`
 
 ### 0x01 配置/etc/named.conf
 
