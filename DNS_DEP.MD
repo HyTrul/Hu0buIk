@@ -1,6 +1,7 @@
 ## 主节点 （10.0.7.1）
+> DNS主节点配置
 
-### =0x00= 安装bind
+### 0x00 安装bind
 
 `yum -y install bind-libs bind-utils bind bind-chroot`
 
