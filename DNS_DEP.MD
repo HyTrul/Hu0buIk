@@ -1,10 +1,10 @@
 ## 主节点 （10.0.7.1）
 
-### 安装bind
+### 0x00 安装bind
 
 'yum -y install bind-libs bind-utils bind bind-chroot'
 
-### 配置/etc/named.conf
+### 0x01 配置/etc/named.conf
 
 ```
 options {
@@ -53,9 +53,11 @@ logging {
 // 引入rfc1912.zones 和 root.key
 include "/etc/named.rfc1912.zones";
 include "/etc/named.root.key";
+```
 
-### 配置/etc/named.rfc1912.zones
+### 0x02 配置/etc/named.rfc1912.zones
 
+```
 // 正向解析
 zone "xiaohou.com" IN {
         type master;
@@ -68,8 +70,9 @@ zone "7.0.10.in-addr.arpa" IN {
     file "10.0.7.arpa.zone";
     allow-update { none; };
 };
+```
 
-### 配置正向区域/var/named/xiaohou.com.zone
+### 0x03 配置正向区域/var/named/xiaohou.com.zone
 
 ```
 $TTL 86400
@@ -94,8 +97,9 @@ mx1     IN  A   10.0.7.3
 mx2     IN  A   10.0.7.4
 ```
 
-配置反向区域/var/named/10.0.7.arpa.zone
+### 0x04 配置反向区域/var/named/10.0.7.arpa.zone
 
+```
 $TTL 1D
 @       IN SOA  ns1.xiaohou.com.  root.xiaohou.com. (
                     11      ; serial
@@ -109,13 +113,16 @@ $TTL 1D
 2         IN PTR  ns2.xiaohou.com.
 3         IN PTR  mx1.xiaohou.com.
 4         IN PTR  mx2.xiaohou.com.
+````
 
-启动
+### 0x05 启动
 
+```
 systemctl start named
 systemctl enable named
+```
 
-如果需要使用chroot启动
+**如果需要使用chroot启动**
 
 /usr/libexec/setup-named-chroot.sh  /var/named/chroot/ on
 systemctl stop named
