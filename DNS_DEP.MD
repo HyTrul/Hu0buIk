@@ -1,4 +1,6 @@
 # DNS 集群
+ - 三个虚拟IP 
+ - yum源环境
 
 ## 主节点 （10.0.7.1）
 > DNS主节点配置
@@ -27,15 +29,15 @@ options {
 };
 
 logging {
-  // 错误日志
+  // 1. 错误日志 - 细节
   channel error_log {
     file "data/error_log" versions 10 size 10m;
     severity warning;
     print-category yes;
     print-severity yes;
     print-time yes;
-};
-  // 查询日志
+  };
+  // 2. 查询日志 - 细节
   channel query_log {
     file "data/query_log" versions 10 size 100m;
     severity info;
@@ -43,11 +45,11 @@ logging {
     print-severity yes;
     print-time yes;
   };
-  // 错误日志
+  // 错误日志 - 引用地
   category default {
     error_log;
   };
-  // 查询日志
+  // 查询日志 - 引用地
   category queries {
     query_log;
   };
@@ -220,7 +222,7 @@ systemctl enable named-chroot
 
 ### 0x00 配置主服务器
 
-首先在主域服务器添加子域：
+首先在主域服务器**添加子域**：
 
 `vim /var/named/xiaohou.com.zone`
 
@@ -313,7 +315,7 @@ zone "blog.xiaohou.com" IN {
         type master;
         file "blog.xiaohou.com.zone";
         allow-update { none; };
-        };
+};
 ```
 
 ### 0x03 配置/var/named/blog.xiaohou.com.zone
@@ -346,3 +348,100 @@ systemctl stop named
 systemctl disable named
 systemctl start named-chroot
 systemctl enable named-chroot
+
+## DNS转发
+
+### 区域转发 - 样例：
+> 配置在**zone段**，仅转发对某特定区域的解析请求；
+
+zone  "ZONE_NAME"  IN {
+       type  forward;
+       forward  first;
+       forwarders { 223.5.5.5;223.6.6.6; };
+};
+
+forward选项：
+
+    first：首先转发；转发器不响应时，自行去迭代查询；
+    only：只转发；
+
+### 全局转发 - 样例：
+> 配置在**options段**，针对凡本地没有通过zone定义的区域查询请求，通通转给某转发器；
+
+vim /etc/named.conf
+
+options {
+     forward  only;
+     forwarders  { SERVER_IP; };
+};
+
+### DNS转发 - 实例：
+
+全局转发（10.0.7.1）
+
+vim /etc/named.conf
+
+options {
+        forward  first;
+        forwarders  { 223.5.5.5;223.6.6.6; };
+};
+
+区域转发（10.0.7.3）
+
+vim /etc/named.rfc1912.zones
+
+zone  "xiaohou.com"  IN {
+       type  forward;
+       forward  only;
+       forwarders { 10.0.7.1; };
+};
+
+## 访问控制ACL
+> 把一个或多个地址归并为一个集合，并通过一个统一的名称调用；
+
+acl acl_name {
+     ip;
+     net/perlen;
+}
+
+四个内置的acl：
+
+    none：没有一个主机
+    any：任意主机
+    local：本机
+    localnet： 本机的IP同掩码运算后得到的地址
+
+    注意： 只能先定义，后使用，通常放置在配置文件最前面
+
+访问控制的指令：
+
+    allow-query{}： 允许查询的主机
+    allow-transfer{}： 允许区域传送
+    allow-recursion{}： 通常定义在全局options段，允许递归的主机
+    allow-update{}： 允许更新区域库的内容，大多数情况为none
+
+配置acl实现访问控制，区域传送只允许slaves定义的主机，所有主机的查询操作都不被允许。
+
+配置主服务器10.0.7.1
+
+vim /etc/named.conf
+acl slaves {
+     10.0.7.2;
+};
+
+vim /etc/named.rfc1912.zones
+zone "xiaohou.com" IN {
+        type master;
+        file "xiaohou.com.zone";
+        allow-query { none; };
+        allow-transfer { slaves; };
+        allow-update { none; };
+};
+
+配置允许递归的主机
+
+vim /etc/named.conf
+options {
+        recursion yes;
+        allow-recursion { 10.0.7.0/24; };
+};
